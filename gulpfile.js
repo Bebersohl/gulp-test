@@ -9,6 +9,15 @@ var gutil = require('gulp-util');
 var assign = require('lodash.assign');
 var babel = require('babelify');
 var sass = require('gulp-sass');
+var imagemin = require('gulp-imagemin');
+
+/*
+ * BUILD
+ */
+ gulp.task('build', ['js', 'sass', 'img'], function(done) {
+   done();
+ });
+
 /*
  * JAVASCRIPT
  */
@@ -22,16 +31,16 @@ var customOpts = {
   })
 };
 var opts = assign({}, watchify.args, customOpts);
-var b = watchify(browserify(opts));
+var bw = watchify(browserify(opts));
 
 // add transformations here
 // i.e. b.transform(coffeeify);
-gulp.task('js', bundle); // so you can run `gulp js` to build the file
-b.on('update', bundle); // on any dep update, runs the bundler
-b.on('log', gutil.log); // output build logs to terminal
+gulp.task('js:watch', bundle); // so you can run `gulp js` to build the file
+bw.on('update', bundle); // on any dep update, runs the bundler
+bw.on('log', gutil.log); // output build logs to terminal
 
 function bundle() {
-  return b.bundle()
+  return bw.bundle()
     // log errors if they happen
     .on('error', gutil.log.bind(gutil, 'Browserify Error'))
     .pipe(source('bundle.min.js'))
@@ -43,8 +52,23 @@ function bundle() {
        .pipe(uglify())
        .on('error', gutil.log)
     .pipe(sourcemaps.write('./')) // writes .map file
-    .pipe(gulp.dest('./dist/js'));
+    .pipe(gulp.dest('./dist/js'))
 }
+
+gulp.task('js', function () {
+  // set up the browserify instance on a task basis
+  var b = browserify(opts);
+
+  return b.bundle()
+    .pipe(source('bundle.min.js'))
+    .pipe(buffer())
+    .pipe(sourcemaps.init({loadMaps: true}))
+        // Add transformation tasks to the pipeline here.
+        .pipe(uglify())
+        .on('error', gutil.log)
+    .pipe(sourcemaps.write('./'))
+    .pipe(gulp.dest('./dist/js/'));
+});
 
 /*
  * SCSS
@@ -60,3 +84,12 @@ function bundle() {
  gulp.task('sass:watch', function () {
   gulp.watch('./source/sass/**/*.scss', ['sass']);
 });
+
+/*
+ * IMAGES
+ */
+ gulp.task('img', () =>
+  gulp.src('./source/images/**/*')
+    .pipe(imagemin())
+    .pipe(gulp.dest('dist/images'))
+);
